@@ -1,5 +1,14 @@
 {
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "canvas": "^3.2.3",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "googleapis": "^174.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
+  },
+  "allowScripts": {
+    "canvas@3.2.3": true,
+    "sqlite3@6.0.1": true
   }
 }
