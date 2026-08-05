@@ -1,3 +1,4 @@
+const { processByes } = require("./byeProcessor");
 const { getDatabase } = require("../database/database");
 const { generateSeeds } = require("./seeding");
 const { generateWinnerBracket } = require("./bracketGenerator");
@@ -22,7 +23,10 @@ async function startTournament() {
     const seededTeams = generateSeeds(teams);
 
     // Generate Winner Bracket
-    const matches = generateWinnerBracket(seededTeams);
+   let matches = generateWinnerBracket(seededTeams);
+
+// Automatically advance teams facing BYEs
+matches = await processByes(matches);
 
     // Clear previous matches
     await db.run(`DELETE FROM matches`);
@@ -31,24 +35,25 @@ async function startTournament() {
     for (const match of matches) {
 
         await db.run(
-            `
-            INSERT INTO matches
-            (
-                team_a,
-                team_b,
-                round,
-                status
-            )
-            VALUES (?, ?, ?, ?)
-            `,
-            [
-                match.team1.team_name,
-                match.team2.team_name,
-                `WB-R${match.round}`,
-                match.status
-            ]
-        );
-
+    `
+    INSERT INTO matches
+    (
+        team_a,
+        team_b,
+        winner,
+        round,
+        status
+    )
+    VALUES (?, ?, ?, ?, ?)
+    `,
+    [
+        match.team1.team_name,
+        match.team2.team_name,
+        match.winner,
+        `WB-R${match.round}`,
+        match.status
+    ]
+);
     }
 
     return {

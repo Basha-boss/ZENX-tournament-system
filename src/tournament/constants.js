@@ -1,27 +1,18 @@
 module.exports = {
 
-    BRACKET_SIZE: [
-        4,
-        8,
-        16,
-        32
-    ],
+    BRACKET_SIZES: [4, 8, 16, 32],
 
-    STATUS: {
-
+    MATCH_STATUS: {
         PENDING: "PENDING",
         READY: "READY",
         LIVE: "LIVE",
         COMPLETED: "COMPLETED"
-
     },
 
-    BRACKET: {
-
+    BRACKETS: {
         WINNER: "WB",
         LOSER: "LB",
         GRAND_FINAL: "GF"
-
     }
 
 };

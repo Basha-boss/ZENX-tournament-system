@@ -33,7 +33,15 @@ async function generateSeeds() {
         throw new Error("Minimum 4 teams required.");
     }
 
-    const shuffled = shuffleTeams(teams);
+    
+
+const shuffled = shuffleTeams(teams);
+
+return shuffled.map((team, index) => ({
+    ...team,
+    seed: index + 1
+}));
+
 
     for (let i = 0; i < shuffled.length; i++) {
 
