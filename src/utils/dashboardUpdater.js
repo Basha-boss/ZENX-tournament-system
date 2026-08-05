@@ -44,6 +44,13 @@ if (!fs.existsSync(databasePath)) {
 
 const DASHBOARD_CHANNEL_ID = process.env.DASHBOARD_CHANNEL_ID;
 
+console.log("================================");
+console.log("TOKEN loaded:", !!process.env.TOKEN);
+console.log("DASHBOARD_CHANNEL_ID:", process.env.DASHBOARD_CHANNEL_ID);
+console.log("COUNTDOWN_CHANNEL_ID:", process.env.COUNTDOWN_CHANNEL_ID);
+console.log("TEAM_REGISTRATION_CHANNEL:", process.env.TEAM_REGISTRATION_CHANNEL);
+console.log("================================");
+
 const channel = await client.channels.fetch(DASHBOARD_CHANNEL_ID);
 
 
