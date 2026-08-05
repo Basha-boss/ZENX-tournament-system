@@ -1,9 +1,44 @@
 {
-    "title": "VALORANT SHOWDOWN",
-    "date": "2026-08-08T19:00:00+05:30",
-    "maxTeams": 32,
-    "registeredTeams": 0,
-    "entryFee": "FREE",
-    "prize": "OPEN TOURNAMENT",
-    "status": "OPEN"
+  "id": "valorant-showdown-s1",
+  "name": "VALORANT SHOWDOWN",
+
+  "game": "VALORANT",
+  "season": 1,
+
+  "date": "2026-08-08T19:00:00+05:30",
+  "registrationClose": "2026-08-08T17:00:00+05:30",
+
+  "maxTeams": 32,
+  "registeredTeams": 0,
+
+  "entryFee": "FREE",
+  "prize": "OPEN TOURNAMENT",
+
+  "status": "OPEN",
+
+  "format": {
+    "round32": "BO1",
+    "round16": "DOUBLE_ELIMINATION",
+    "quarterFinal": "BO3",
+    "semiFinal": "BO3",
+    "grandFinal": "BO5"
+  },
+
+  "seeding": {
+    "type": "RANK_BASED"
+  },
+
+  "registration": {
+    "googleForm": "",
+    "googleSheetId": ""
+  },
+
+  "channels": {
+    "countdown": "",
+    "announcements": "",
+    "registration": "",
+    "rules": "",
+    "brackets": "",
+    "results": ""
+  }
 }

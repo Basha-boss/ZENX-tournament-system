@@ -1,131 +1,189 @@
 const sqlite3 = require("sqlite3");
 const { open } = require("sqlite");
 const path = require("path");
+const tournament = require("../config/tournament.json");
 
 let db;
 
 async function connectDatabase() {
+    try {
+        db = await open({
+            filename: path.join(__dirname, "zenx.db"),
+            driver: sqlite3.Database
+        });
 
-    db = await open({
-        filename: path.join(__dirname, "zenx.db"),
-        driver: sqlite3.Database
-    });
+        // Enable Foreign Keys
+        await db.exec("PRAGMA foreign_keys = ON;");
 
-    console.log("✅ SQLite Connected");
+        console.log("✅ SQLite Connected");
 
-    // ===========================
-    // Teams
-    // ===========================
+        // =====================================
+        // Teams
+        // =====================================
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS teams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS teams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    team_name TEXT UNIQUE,
+                team_name TEXT UNIQUE NOT NULL,
 
-    manager TEXT,
+                manager TEXT,
 
-    coach TEXT,
+                coach TEXT,
 
-    captain TEXT,
+                captain TEXT,
 
-    whatsapp TEXT,
+                whatsapp TEXT,
 
-    logo TEXT,
+                logo TEXT,
 
-    checked_in INTEGER DEFAULT 0,
+                checked_in INTEGER DEFAULT 0,
 
-    status TEXT DEFAULT 'Registered',
+                status TEXT DEFAULT 'Registered',
 
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-    `);
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 
-    await db.exec(`
-CREATE TABLE IF NOT EXISTS players (
+        await db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_team_name
+            ON teams(team_name);
+        `);
 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+        // =====================================
+        // Players
+        // =====================================
 
-    team_id INTEGER,
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS players (
 
-    player_number INTEGER,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    real_name TEXT,
+                team_id INTEGER NOT NULL,
 
-    riot_id TEXT,
+                player_number INTEGER,
 
-    current_rank TEXT,
+                real_name TEXT,
 
-    peak_rank TEXT,
+                riot_id TEXT,
 
-    discord_id TEXT,
+                current_rank TEXT,
 
-    youtube_channel TEXT,
+                peak_rank TEXT,
 
-    FOREIGN KEY(team_id) REFERENCES teams(id)
+                discord_id TEXT,
 
-);
-`);
+                youtube_channel TEXT,
 
-    // ===========================
-    // Tournament Settings
-    // ===========================
+                FOREIGN KEY(team_id)
+                REFERENCES teams(id)
+                ON DELETE CASCADE
+            );
+        `);
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY,
-            registration TEXT DEFAULT 'OPEN',
-            max_teams INTEGER DEFAULT 32,
-            current_teams INTEGER DEFAULT 0,
-            tournament_date TEXT,
-            tournament_time TEXT
+        // =====================================
+        // Tournament Settings
+        // =====================================
+
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS settings (
+
+                id INTEGER PRIMARY KEY,
+
+                registration TEXT DEFAULT 'OPEN',
+
+                max_teams INTEGER DEFAULT 32,
+
+                current_teams INTEGER DEFAULT 0,
+
+                tournament_date TEXT,
+
+                tournament_time TEXT
+            );
+        `);
+
+        const tournamentDate = new Date(tournament.date);
+
+        await db.run(
+            `
+            INSERT OR IGNORE INTO settings
+            (
+                id,
+                registration,
+                max_teams,
+                current_teams,
+                tournament_date,
+                tournament_time
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            [
+                1,
+                tournament.status,
+                tournament.maxTeams,
+                tournament.registeredTeams,
+                tournamentDate.toLocaleDateString("en-GB"),
+                tournamentDate.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true
+                })
+            ]
         );
-    `);
 
+        // =====================================
+        // Matches
+        // =====================================
 
-    await db.run(`
-INSERT OR IGNORE INTO settings
-(
-    id,
-    registration,
-    max_teams,
-    current_teams,
-    tournament_date,
-    tournament_time
-)
-VALUES
-(
-    1,
-    'OPEN',
-    32,
-    0,
-    '8 August 2026',
-    '7:00 PM IST'
-)
-`);
-    // ===========================
-    // Matches
-    // ===========================
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS matches (
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS matches (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_a TEXT,
-            team_b TEXT,
-            winner TEXT,
-            round TEXT,
-            status TEXT DEFAULT 'Pending'
-        );
-    `);
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    console.log("✅ Database Ready");
+                team_a TEXT,
+
+                team_b TEXT,
+
+                winner TEXT,
+
+                round TEXT,
+
+                status TEXT DEFAULT 'Pending',
+
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_match_round
+            ON matches(round);
+        `);
+
+        console.log("✅ Database Ready");
+    } catch (error) {
+        console.error("❌ Database Error");
+        console.error(error);
+        process.exit(1);
+    }
 }
 
 function getDatabase() {
+    if (!db) {
+        throw new Error("Database has not been initialized.");
+    }
+
     return db;
+}
+
+async function closeDatabase() {
+    if (db) {
+        await db.close();
+        console.log("🛑 Database Closed");
+    }
 }
 
 module.exports = {
     connectDatabase,
-    getDatabase
+    getDatabase,
+    closeDatabase
 };

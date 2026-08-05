@@ -1,17 +1,22 @@
 const { getDatabase } = require("../database/database");
 
 async function getTeamCount() {
-    const db = getDatabase();
+    try {
+        const db = getDatabase();
 
-    if (!db) {
-        throw new Error("Database is not connected. Did you call connectDatabase() first?");
+        const result = await db.get(
+            "SELECT COUNT(*) AS total FROM teams"
+        );
+
+        return result?.total || 0;
+
+    } catch (err) {
+
+        console.error("❌ Failed to get team count");
+        console.error(err.stack || err);
+
+        return 0;
     }
-
-    const result = await db.get(
-        "SELECT COUNT(*) AS total FROM teams"
-    );
-
-    return result.total;
 }
 
 module.exports = {

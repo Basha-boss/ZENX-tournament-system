@@ -1,3 +1,4 @@
+const tournament = require("../config/tournament.json");
 const { getTeamCount } = require("./teamService");
 const fs = require("fs");
 const path = require("path");
@@ -6,10 +7,8 @@ const { AttachmentBuilder } = require("discord.js");
 
 const getCountdown = require("./countdown");
 const generateDashboard = require("./imageGenerator");
-    
+
 let dashboardInterval = null;
-
-
 
 async function updateDashboard(client) {
 
@@ -21,7 +20,7 @@ async function updateDashboard(client) {
     );
 
     if (!fs.existsSync(databasePath)) {
-        console.log("dashboard.json not found.");
+        console.log("❌ dashboard.json not found.");
         return;
     }
 
@@ -30,7 +29,7 @@ async function updateDashboard(client) {
     );
 
     if (!database.channelId || !database.messageId) {
-        console.log("Dashboard not created yet.");
+        console.log("❌ Dashboard not created yet.");
         return;
     }
 
@@ -38,90 +37,105 @@ async function updateDashboard(client) {
 
         const channel = await client.channels.fetch(database.channelId);
 
-        if (!channel) return;
+        if (!channel) {
+            console.log("❌ Dashboard channel not found.");
+            return;
+        }
 
         const message = await channel.messages.fetch(database.messageId);
 
-        if (!message) return;
+        if (!message) {
+            console.log("❌ Dashboard message not found.");
+            return;
+        }
 
         console.log("✅ Dashboard updater started.");
+        console.log(`📢 Channel: ${database.channelId}`);
+        console.log(`📝 Message: ${database.messageId}`);
 
-        if (dashboardInterval) clearInterval(dashboardInterval);
+        if (dashboardInterval) {
+            clearInterval(dashboardInterval);
+        }
 
-        dashboardInterval = setInterval(async () => {
+        async function refreshDashboard() {
 
             try {
 
                 const timer = getCountdown();
+                const teamCount = await getTeamCount();
 
                 console.log(
-    `Updating: ${timer.days}:${timer.hours}:${timer.minutes}:${timer.seconds}`
-);
-const teamCount = await getTeamCount();
+                    `📊 Teams: ${teamCount}/${tournament.maxTeams} | ⏳ ${timer.days}d ${timer.hours}h ${timer.minutes}m ${timer.seconds}s`
+                );
 
-console.log("DASHBOARD TEAM COUNT:", teamCount);
+                const eventDate = new Date(tournament.date);
 
-console.log(
-    "Dashboard Timer:",
-    timer.days,
-    timer.hours,
-    timer.minutes,
-    timer.seconds
-);
+                console.log("🖼 Generating dashboard image...");
 
-await generateDashboard({
-    console.log(
-    "Generated image at:",
-    path.join(__dirname, "..", "assets", "dashboard.png")
-);
+                await generateDashboard({
+                    days: timer.days,
+                    hours: timer.hours,
+                    minutes: timer.minutes,
+                    seconds: timer.seconds,
 
+                    teams: teamCount,
+                    maxTeams: tournament.maxTeams,
 
-    days: timer.days,
-    hours: timer.hours,
-    minutes: timer.minutes,
-    seconds: timer.seconds,
+                    registration: tournament.status,
 
-    teams: teamCount,
+                    date: eventDate.toLocaleDateString("en-GB"),
 
-    registration: "OPEN",
+                    time: eventDate.toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true
+                    }),
 
-    date: "8 August 2026",
+                    output: "dashboard.png"
+                });
 
-    time: "7:00 PM IST"
+                const attachment = new AttachmentBuilder(
+                    fs.readFileSync(
+                        path.join(
+                            __dirname,
+                            "..",
+                            "assets",
+                            "dashboard.png"
+                        )
+                    ),
+                    {
+                        name: "dashboard.png"
+                    }
+                );
 
-});
+                await message.edit({
+                    attachments: [],
+                    files: [attachment]
+                });
 
-     const attachment = new AttachmentBuilder(
-    fs.readFileSync(
-        path.join(__dirname, "..", "assets", "dashboard.png")
-    ),
-    {
-        name: `dashboard-${Date.now()}.png`
-    }
-);
-
-console.log("Editing dashboard message...");
-
-await message.edit({
-    attachments: [],
-    files: [attachment]
-});
-
-console.log("Dashboard message updated!");
-
-
+                console.log(
+                    `✅ Dashboard Updated | ${teamCount}/${tournament.maxTeams} Teams`
+                );
 
             } catch (err) {
 
-                console.error("Dashboard Update Error:", err);
+                console.error("❌ Dashboard Update Error");
+                console.error(err.stack || err);
 
             }
 
-        }, 2000);
+        }
+
+        // Update immediately when bot starts
+        await refreshDashboard();
+
+        // Continue updating every 30 seconds
+        dashboardInterval = setInterval(refreshDashboard, 30000);
 
     } catch (err) {
 
-        console.error("Dashboard Startup Error:", err);
+        console.error("❌ Dashboard Startup Error");
+        console.error(err.stack || err);
 
     }
 

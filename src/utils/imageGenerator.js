@@ -21,7 +21,7 @@ try {
             "Orbitron-Bold.ttf"
         ),
         {
-            family: "Orbitron"
+            family: "Orbitron",
         }
     );
 } catch (err) {
@@ -66,8 +66,8 @@ async function generateDashboard(data) {
     // RED GLOW
     // ===============================
 
-    ctx.shadowColor = "#ff0000";
-    ctx.shadowBlur = 30;
+    ctx.shadowColor = "#ff3b30";
+    ctx.shadowBlur = 45;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
@@ -76,28 +76,43 @@ async function generateDashboard(data) {
     // ===============================
 
     ctx.fillStyle = "#ff2b2b";
-    ctx.font = "bold 105px Arial";
+    ctx.font = "bold 105px Orbitron";
 
     // ===============================
     // DRAW NUMBER
     // ===============================
 
-    function drawNumber(number, x, y) {
+  function drawNumber(number, x, y) {
 
-        ctx.fillText(
-            String(number).padStart(2, "0"),
-            x,
-            y
-        );
+    const value = Math.max(0, Number(number) || 0);
 
-    }     // ===============================
+    ctx.fillText(
+        value.toString().padStart(2, "0"),
+        x,
+        y
+    );
+
+}
+
+         // ===============================
     // DRAW COUNTDOWN
     // ===============================
 
-    drawNumber(data.days, 280, 555);
-    drawNumber(data.hours, 618, 555);
-    drawNumber(data.minutes, 956, 555);
-    drawNumber(data.seconds, 1294, 555);
+const positions = [
+    280,
+    618,
+    956,
+    1294
+];
+
+[
+    data.days,
+    data.hours,
+    data.minutes,
+    data.seconds
+].forEach((value,index)=>{
+    drawNumber(value,positions[index],555);
+});
    
     // ===============================
     // TEAMS
@@ -105,9 +120,13 @@ async function generateDashboard(data) {
 
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 42px Arial";
+    ctx.font = "bold 42px Orbitron";
 
-    ctx.fillText(`${data.teams}/32`, 250, 805);
+    ctx.fillText(
+    `${data.teams}/${data.maxTeams}`,
+    250,
+    805
+);
 
     // ===============================
     // REGISTRATION
@@ -115,10 +134,10 @@ async function generateDashboard(data) {
 
     ctx.fillStyle =
         data.registration === "OPEN"
-            ? "#33FF33"
-            : "#FF3333";
+            ? "#00FF66"
+            : "#FF3B30";
 
-    ctx.font = "bold 42px Arial";
+    ctx.font = "bold 42px Orbitron";
     
     ctx.fillText(
     data.registration,
@@ -131,33 +150,43 @@ async function generateDashboard(data) {
 
     ctx.fillStyle = "#FFFFFF";
 
-    ctx.font = " bold 36px Arial";
+    ctx.font = " bold 36px Orbitron";
     ctx.fillText(data.date, 1075, 805);
 
     // ===============================
     // TIME
     // ===============================
 
-    ctx.font = " bold 36px Arial";
+    ctx.font = " bold 36px Orbitron";
     ctx.fillText(data.time, 1455, 805);
 
     // ===============================
     // SAVE IMAGE
     // ===============================
 
-    const output = path.join(
-        __dirname,
-        "..",
-        "assets",
-        "dashboard.png"
-    );
+const output = path.resolve(
+    __dirname,
+    "..",
+    "assets",
+    data.output || "dashboard.png"
+);
 
-    fs.writeFileSync(
-        output,
-        canvas.toBuffer("image/png")
-    );
+// Make sure the assets folder exists
+await fs.promises.mkdir(
+    path.dirname(output),
+    { recursive: true }
+);
 
-    return output;
+// Save image
+await fs.promises.writeFile(
+    output,
+    canvas.toBuffer("image/png")
+);
+
+console.log(`🖼 Dashboard image saved: ${output}`);
+
+return output;
+
 }
 
 module.exports = generateDashboard;

@@ -1,20 +1,21 @@
+const tournament = require("../config/tournament.json");
+
 function getCountdown() {
 
-    const target = new Date("2026-08-08T19:00:00+05:30").getTime();
+    const target = new Date(tournament.date).getTime();
     const now = Date.now();
 
     let diff = target - now;
 
     if (diff <= 0) {
-
         return {
             live: true,
             days: 0,
             hours: 0,
             minutes: 0,
-            seconds: 0
+            seconds: 0,
+            total: 0
         };
-
     }
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -29,19 +30,13 @@ function getCountdown() {
     const seconds = Math.floor(diff / 1000);
 
     return {
-
         live: false,
-
+        total: target - now,
         days,
-
         hours,
-
         minutes,
-
         seconds
-
     };
-
 }
 
 module.exports = getCountdown;
