@@ -9,6 +9,7 @@ const path = require("path");
 const getCountdown = require("./utils/countdown");
 const generateDashboard = require("./utils/imageGenerator");
 const updateDashboard = require("./utils/dashboardUpdater");
+const tournament = require("./config/tournament.json");
 
 const  {
     Client,
@@ -35,18 +36,20 @@ const client = new Client({
 client.once(Events.ClientReady, async (client) => {
    
 
-    await connectDatabase(); 
+await connectDatabase();
 
-    startTeamWatcher(client);
+console.log(`✅ Logged in as ${client.user.tag}`);
 
-    console.log(`✅ Logged in as ${client.user.tag}`);
+client.user.setActivity("🏆 VALORANT SHOWDOWN", {
+    type: ActivityType.Watching
+});
 
-    client.user.setActivity("🏆 VALORANT SHOWDOWN", {
-        type: ActivityType.Watching
-    });
-      await updateDashboard(client);
-      
-      await startAutoCountdown(client);
+await updateDashboard(client);
+
+startTeamWatcher(client);
+
+await startAutoCountdown(client);
+
 });
 
 // =========================
@@ -60,23 +63,42 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         if (interaction.commandName === "dashboard") {
 
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: false });
 
   
     const timer = getCountdown();
 
-    await generateDashboard({
-        days: timer.days,
-        hours: timer.hours,
-        minutes: timer.minutes,
-        seconds: timer.seconds,
-        teams: await getTeamCount(),
-        registration: "OPEN",
-        date: "8 August 2026",
-        time: "7:00 PM IST"
-    });
+ const eventDate = new Date(tournament.date);
 
-    const attachment = new AttachmentBuilder("./assets/dashboard.png");
+await generateDashboard({
+    days: timer.days,
+    hours: timer.hours,
+    minutes: timer.minutes,
+    seconds: timer.seconds,
+
+    teams: await getTeamCount(),
+    maxTeams: tournament.maxTeams,
+
+    registration: tournament.status,
+
+    date: eventDate.toLocaleDateString("en-GB"),
+
+    time: eventDate.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+    }),
+
+    output: "dashboard.png"
+});
+
+const dashboardPath = path.join(
+    __dirname,
+    "assets",
+    "dashboard.png"
+);
+
+const attachment = new AttachmentBuilder(dashboardPath);
 
     const message = await interaction.channel.send({
         files: [attachment]
@@ -98,8 +120,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 }
         if (interaction.commandName === "tournament") {
 
-            await interaction.deferReply();
+            await interaction.deferReply({
+    ephemeral: false
+});
             const teamCount = await getTeamCount();
+            const eventDate = new Date(tournament.date);
             const embed = new EmbedBuilder()
 
                 .setColor("#E11D48")
@@ -128,19 +153,23 @@ ${(() => {
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 👥 **Teams**
-**${teamCount} / 32**
+**${teamCount} / ${tournament.maxTeams}**
 
 📅 **Date**
-8 August 2026
+${eventDate.toLocaleDateString("en-GB")}
 
 🕖 **Time**
-7:00 PM IST
+${eventDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+})}
 
 💸 **Entry Fee**
 FREE
 
 🏆 **Prize**
-Community Tournament
+${tournament.prize}
 
 🗺️ **Map Pool**
 Current Competitive Rotation
@@ -166,7 +195,7 @@ Hosted by **ZENX Esports**
 
                         .setStyle(ButtonStyle.Link)
 
-                        .setURL("https://docs.google.com/forms/d/e/1FAIpQLSe7baOq1Ip4bML4yyfhsyqxckgCHyHnKf-LgfIou9skUxeuIQ/viewform"),
+.setURL(tournament.registration.googleForm),
 
                     new ButtonBuilder()
 
@@ -186,7 +215,7 @@ Hosted by **ZENX Esports**
 
                 );
 
-           const message = await interaction.editReply({
+await interaction.editReply({
 
     embeds: [embed],
 
@@ -196,15 +225,17 @@ Hosted by **ZENX Esports**
 
 });
 
+const message = await interaction.fetchReply();
+
 const tournamentData = {
     channelId: interaction.channel.id,
     messageId: message.id
 };
-
 fs.writeFileSync(
     path.join(__dirname, "database", "tournament.json"),
     JSON.stringify(tournamentData, null, 4)
 );
+console.log("✅ Tournament message created.");
 
         }
 
@@ -224,7 +255,11 @@ fs.writeFileSync(
         path.join(__dirname, "config", "rules.md"),
         "utf8"
     );
-
+const logoPath = path.join(
+    __dirname,
+    "assets",
+    "logo.png"
+);
     const embed = new EmbedBuilder()
         .setColor("#E11D48")
         .setTitle("📜 ZENX ESPORTS | VALORANT TOURNAMENT RULEBOOK")
@@ -235,10 +270,9 @@ fs.writeFileSync(
         })
         .setTimestamp();
 
-    await interaction.editReply({
+    await interaction.reply({
         embeds: [embed],
-        components: [buttons],
-        files: ["./assets/logo.png"],
+        files: [logoPath],
         ephemeral: true
     });
 

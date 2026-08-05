@@ -28,10 +28,10 @@
     "type": "RANK_BASED"
   },
 
-  "registration": {
-    "googleForm": "",
-    "googleSheetId": ""
-  },
+ "registration": {
+  "googleForm": "https://docs.google.com/forms/d/e/1FAIpQLSe7baOq1Ip4bML4yyfhsyqxckgCHyHnKf-LgfIou9skUxeuIQ/viewform",
+  "googleSheetId": "1Ij5h7sD0iEXTX4PMNg8kSixQX6aF6IFDqQVyd4bbEYI"
+},
 
   "channels": {
     "countdown": "",
