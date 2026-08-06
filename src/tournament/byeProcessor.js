@@ -1,37 +1,27 @@
-const { getDatabase } = require("../database/database");
+const { MATCH_STATUS } = require("./constants");
 
 async function processByes(matches) {
+    return matches.map(match => {
+        const isTeam1Bye = match.team1?.bye || match.team1?.team_name === "BYE";
+        const isTeam2Bye = match.team2?.bye || match.team2?.team_name === "BYE";
 
-    const db = getDatabase();
+        let winner = null;
+        let status = MATCH_STATUS.PENDING;
 
-    for (const match of matches) {
-
-        const team1Bye = match.team1?.bye;
-        const team2Bye = match.team2?.bye;
-
-        // Ignore BYE vs BYE
-        if (team1Bye && team2Bye) continue;
-
-        // Team 1 advances
-        if (!team1Bye && team2Bye) {
-
-            match.winner = match.team1.team_name;
-            match.status = "COMPLETED";
-
+        if (isTeam1Bye && !isTeam2Bye) {
+            winner = match.team2?.team_name || null;
+            status = MATCH_STATUS.COMPLETED;
+        } else if (!isTeam1Bye && isTeam2Bye) {
+            winner = match.team1?.team_name || null;
+            status = MATCH_STATUS.COMPLETED;
         }
 
-        // Team 2 advances
-        if (team1Bye && !team2Bye) {
-
-            match.winner = match.team2.team_name;
-            match.status = "COMPLETED";
-
-        }
-
-    }
-
-    return matches;
-
+        return {
+            ...match,
+            winner,
+            status
+        };
+    });
 }
 
 module.exports = {

@@ -8,54 +8,39 @@ function shuffleTeams(teams) {
 
     for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-
-        [shuffled[i], shuffled[j]] = [
-            shuffled[j],
-            shuffled[i]
-        ];
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
     return shuffled;
 }
 
-async function generateSeeds() {
+async function generateSeeds(providedTeams) {
+    let teams = providedTeams;
 
-    const db = getDatabase();
-
-    const teams = await db.all(`
-        SELECT *
-        FROM teams
-        WHERE status='Registered'
-        ORDER BY id ASC
-    `);
-
-    if (teams.length < 4) {
-        throw new Error("Minimum 4 teams required.");
+    if (!teams || !teams.length) {
+        const db = getDatabase();
+        teams = await db.all(`
+            SELECT *
+            FROM teams
+            WHERE status = 'Registered'
+            ORDER BY id ASC
+        `);
     }
 
-    
-
-const shuffled = shuffleTeams(teams);
-
-return shuffled.map((team, index) => ({
-    ...team,
-    seed: index + 1
-}));
-
-
-    for (let i = 0; i < shuffled.length; i++) {
-
-        await db.run(
-            `UPDATE teams SET seed=? WHERE id=?`,
-            [i + 1, shuffled[i].id]
-        );
-
-        shuffled[i].seed = i + 1;
+    if (teams.length < 2) {
+        throw new Error("Minimum 2 teams required to generate seeds.");
     }
 
-    console.log(`✅ ${shuffled.length} teams seeded.`);
+    const shuffled = shuffleTeams(teams);
 
-    return shuffled;
+    const seeded = shuffled.map((team, index) => ({
+        ...team,
+        seed: index + 1
+    }));
+
+    console.log(`✅ ${seeded.length} teams seeded.`);
+
+    return seeded;
 }
 
 module.exports = {

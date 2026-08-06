@@ -1,17 +1,10 @@
-const { getTeams } = require("./utils/googleSheets");
+const { getTeams } = require("../src/utils/googleSheets");
 
 (async () => {
-
     try {
-
         const teams = await getTeams();
-
-        console.log(teams);
-
+        console.log("Teams from Google Sheets:", teams);
     } catch (err) {
-
-        console.error(err);
-
+        console.error("Google Sheets Test Error:", err);
     }
-
 })();

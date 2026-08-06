@@ -1,35 +1,53 @@
-const { getTeams } = require("./googleSheets");
+const { getTeams, getTeamsMMR } = require("./googleSheets");
 const { getDatabase } = require("../database/database");
 const sendRegistrationAnnouncement = require("./registrationAnnouncement");
+const updateTeamList = require("./teamListUpdater");
+
+let isInitialSyncDone = false;
 
 async function syncTeams(client) {
-
     try {
-
         const db = getDatabase();
         const sheetTeams = await getTeams();
+        const mmrMap = await getTeamsMMR();
 
-        console.log(`📥 Google Sheets returned ${sheetTeams.length} team(s).`);
+        console.log(`📥 Google Sheets returned ${sheetTeams.length} team(s) and ${mmrMap.size} MMR record(s).`);
 
         let newTeams = 0;
         let removedTeams = 0;
 
+        // Check if initial sync has occurred
+        const existingCount = await db.get("SELECT COUNT(*) AS total FROM teams");
+        const isFirstSync = !isInitialSyncDone && (existingCount?.total === 0 || existingCount?.total < sheetTeams.length);
+
         // =========================
-        // IMPORT NEW TEAMS
+        // IMPORT / UPDATE TEAMS, MMR & LOGO
         // =========================
 
         for (const team of sheetTeams) {
-
             if (!team.teamName) continue;
 
             const teamName = team.teamName.trim();
+            const mmrData = mmrMap.get(teamName.toLowerCase()) || { mmr: 0, logo: "" };
+            const mmr = mmrData.mmr;
+            const logo = mmrData.logo;
 
             const exists = await db.get(
-                "SELECT id FROM teams WHERE LOWER(team_name)=LOWER(?)",
+                "SELECT id, mmr, logo FROM teams WHERE LOWER(team_name)=LOWER(?)",
                 [teamName]
             );
 
-            if (exists) continue;
+            if (exists) {
+                // Update MMR or Logo if changed
+                if (exists.mmr !== mmr || exists.logo !== logo) {
+                    await db.run(
+                        "UPDATE teams SET mmr=?, logo=? WHERE id=?",
+                        [mmr, logo, exists.id]
+                    );
+                    console.log(`🔄 Updated MMR/Logo for ${teamName}: MMR=${mmr}, Logo=${logo ? "Yes" : "No"}`);
+                }
+                continue;
+            }
 
             await db.run(
                 `
@@ -38,25 +56,38 @@ async function syncTeams(client) {
                     team_name,
                     manager,
                     coach,
-                    captain
+                    captain,
+                    mmr,
+                    logo
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 `,
                 [
                     teamName,
                     team.manager || "",
                     team.coach || "",
-                    team.captain || ""
+                    team.captain || "",
+                    mmr,
+                    logo
                 ]
             );
 
             newTeams++;
 
-            console.log(`✅ Imported: ${teamName}`);
+            console.log(`✅ Imported: ${teamName} (MMR: ${mmr})`);
 
-            if (client) {
+            // Only send individual announcements for single new teams after initial sync
+            if (client && !isFirstSync) {
                 await sendRegistrationAnnouncement(client, team);
             }
+        }
+
+        // Sync MMR & Logo for any teams already in DB that exist in MMR sheet
+        for (const [name, data] of mmrMap.entries()) {
+            await db.run(
+                "UPDATE teams SET mmr=?, logo=? WHERE LOWER(team_name)=LOWER(?) AND (mmr != ? OR logo != ?)",
+                [data.mmr, data.logo, name, data.mmr, data.logo]
+            );
         }
 
         // =========================
@@ -72,9 +103,7 @@ async function syncTeams(client) {
             .map(team => team.teamName.trim().toLowerCase());
 
         for (const dbTeam of databaseTeams) {
-
             if (!sheetNames.includes(dbTeam.team_name.toLowerCase())) {
-
                 await db.run(
                     "DELETE FROM teams WHERE team_name = ?",
                     [dbTeam.team_name]
@@ -93,7 +122,7 @@ async function syncTeams(client) {
         await db.run(`
             UPDATE settings
             SET current_teams = (
-                SELECT COUNT(*) FROM teams
+                SELECT COUNT(*) FROM teams WHERE status = 'Registered'
             )
             WHERE id = 1
         `);
@@ -102,16 +131,21 @@ async function syncTeams(client) {
             `📊 Sync Complete | Added: ${newTeams} | Removed: ${removedTeams}`
         );
 
+        isInitialSyncDone = true;
+
+        // Update live team roster embed on Discord
+        if (client) {
+            await updateTeamList(client);
+        }
+
         return newTeams;
 
     } catch (err) {
-
         console.error("❌ Team Sync Failed");
         console.error(err.stack || err);
 
         return 0;
     }
-
 }
 
 module.exports = syncTeams;

@@ -8,6 +8,8 @@ const path = require("path");
 
 const getCountdown = require("../utils/countdown");
 const generateDashboard = require("../utils/imageGenerator");
+const { getTeamCount } = require("../utils/teamService");
+const tournament = require("../config/tournament.json");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,8 +17,11 @@ module.exports = {
         .setDescription("Create the live tournament dashboard"),
 
     async execute(interaction) {
+        await interaction.deferReply({ ephemeral: true });
 
         const timer = getCountdown();
+        const teamCount = await getTeamCount();
+        const eventDate = new Date(tournament.date);
 
         await generateDashboard({
             days: timer.days,
@@ -24,13 +29,26 @@ module.exports = {
             minutes: timer.minutes,
             seconds: timer.seconds,
 
-            teams: 0,
-            registration: "OPEN",
-            date: "8 August 2026",
-            time: "7:00 PM IST"
+            teams: teamCount,
+            maxTeams: tournament.maxTeams,
+            registration: tournament.status,
+            date: eventDate.toLocaleDateString("en-GB"),
+            time: eventDate.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true
+            }),
+            output: "dashboard.png"
         });
 
-        const attachment = new AttachmentBuilder("./assets/dashboard.png");
+        const dashboardPath = path.join(
+            __dirname,
+            "..",
+            "assets",
+            "dashboard.png"
+        );
+
+        const attachment = new AttachmentBuilder(dashboardPath);
 
         const message = await interaction.channel.send({
             files: [attachment]
@@ -46,10 +64,8 @@ module.exports = {
             JSON.stringify(data, null, 4)
         );
 
-        await interaction.reply({
-            content: "✅ Live dashboard created successfully.",
-            ephemeral: true
+        await interaction.editReply({
+            content: "✅ Live dashboard created successfully."
         });
-
     }
 };

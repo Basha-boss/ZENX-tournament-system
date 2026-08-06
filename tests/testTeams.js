@@ -1,14 +1,14 @@
 require("dotenv").config();
 
-const { connectDatabase } = require("./database/database");
-const { getTeamCount } = require("./utils/teamService");
+const { connectDatabase } = require("../src/database/database");
+const { getTeamCount } = require("../src/utils/teamService");
 
 (async () => {
-
-    await connectDatabase();
-
-    const teams = await getTeamCount();
-
-    console.log("Teams:", teams);
-
+    try {
+        await connectDatabase();
+        const count = await getTeamCount();
+        console.log("Team Count:", count);
+    } catch (err) {
+        console.error("Teams Test Error:", err);
+    }
 })();

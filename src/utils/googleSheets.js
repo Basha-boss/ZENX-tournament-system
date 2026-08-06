@@ -44,7 +44,6 @@ async function getTeams() {
         const teams = [];
 
         for (let i = 1; i < rows.length; i++) {
-
             const row = rows[i];
 
             if (!row[1]) continue;
@@ -78,12 +77,45 @@ async function getTeams() {
         return uniqueTeams;
 
     } catch (error) {
-        console.error("❌ Google Sheets Error");
-        console.error(error);
+        console.error("❌ Google Sheets Error:", error.message);
         return [];
     }
 }
 
+async function getTeamsMMR() {
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: "MMR!A:D",
+        });
+
+        const rows = response.data.values || [];
+
+        if (rows.length <= 1) return new Map();
+
+        const mmrMap = new Map();
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+
+            if (!row || !row[1]) continue;
+
+            const teamName = row[1].toString().trim().toLowerCase();
+            const mmr = parseFloat(row[2]) || 0;
+            const logo = row[3] ? row[3].toString().trim() : "";
+
+            mmrMap.set(teamName, { mmr, logo });
+        }
+
+        return mmrMap;
+
+    } catch (error) {
+        console.error("❌ Google Sheets MMR Read Error:", error.message);
+        return new Map();
+    }
+}
+
 module.exports = {
-    getTeams
+    getTeams,
+    getTeamsMMR
 };

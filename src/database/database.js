@@ -41,9 +41,19 @@ async function connectDatabase() {
 
                 status TEXT DEFAULT 'Registered',
 
+                mmr REAL DEFAULT 0,
+
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Migration: Ensure mmr & logo columns exist for older DBs
+        try {
+            await db.exec("ALTER TABLE teams ADD COLUMN mmr REAL DEFAULT 0;");
+        } catch {}
+        try {
+            await db.exec("ALTER TABLE teams ADD COLUMN logo TEXT;");
+        } catch {}
 
         await db.exec(`
             CREATE INDEX IF NOT EXISTS idx_team_name
@@ -135,78 +145,41 @@ async function connectDatabase() {
         // Matches
         // =====================================
 
-// =====================================
-// Tournament Matches
-// =====================================
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS matches (
 
-await db.exec(`
-CREATE TABLE IF NOT EXISTS matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_a TEXT,
 
-    match_id TEXT UNIQUE,
+                team_b TEXT,
 
-    bracket TEXT,
+                winner TEXT,
 
-    round INTEGER,
+                round TEXT,
 
-    match_number INTEGER,
+                status TEXT DEFAULT 'Pending',
 
-    team1_id INTEGER,
+                score_a INTEGER DEFAULT 0,
 
-    team2_id INTEGER,
+                score_b INTEGER DEFAULT 0,
 
-    winner_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 
-    loser_id INTEGER,
+        // Migration: Ensure score_a and score_b columns exist for older DBs
+        try {
+            await db.exec("ALTER TABLE matches ADD COLUMN score_a INTEGER DEFAULT 0;");
+        } catch {}
+        try {
+            await db.exec("ALTER TABLE matches ADD COLUMN score_b INTEGER DEFAULT 0;");
+        } catch {}
 
-    status TEXT DEFAULT 'PENDING',
-
-    best_of INTEGER DEFAULT 1,
-
-    score TEXT,
-
-    mapban_link TEXT,
-
-    discord_channel_id TEXT,
-
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY(team1_id) REFERENCES teams(id),
-
-    FOREIGN KEY(team2_id) REFERENCES teams(id),
-
-    FOREIGN KEY(winner_id) REFERENCES teams(id),
-
-    FOREIGN KEY(loser_id) REFERENCES teams(id)
-
-);
-`);
-
-await db.exec(`
-CREATE INDEX IF NOT EXISTS idx_match_id
-ON matches(match_id);
-`);
-
-// =====================================
-// Bracket Progression
-// =====================================
-
-await db.exec(`
-CREATE TABLE IF NOT EXISTS bracket_progression (
-
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-    current_match TEXT,
-
-    winner_next_match TEXT,
-
-    loser_next_match TEXT
-
-);
-`);
-
-
+        await db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_match_round
+            ON matches(round);
+        `);
 
         console.log("✅ Database Ready");
     } catch (error) {

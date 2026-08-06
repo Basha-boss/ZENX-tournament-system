@@ -5,16 +5,13 @@ async function getTeamCount() {
         const db = getDatabase();
 
         const result = await db.get(
-            "SELECT COUNT(*) AS total FROM teams"
+            "SELECT COUNT(*) AS total FROM teams WHERE status = 'Registered'"
         );
 
         return result?.total || 0;
 
     } catch (err) {
-
-        console.error("❌ Failed to get team count");
-        console.error(err.stack || err);
-
+        console.error("❌ Failed to get team count:", err.message);
         return 0;
     }
 }

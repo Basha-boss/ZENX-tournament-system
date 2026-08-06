@@ -2,54 +2,36 @@ const { getDatabase } = require("../database/database");
 const { MATCH_STATUS } = require("./constants");
 
 async function saveMatches(matches) {
-
     const db = getDatabase();
 
     // Remove old tournament matches
     await db.run(`DELETE FROM matches`);
 
     for (const match of matches) {
+        const teamA = match.team1?.team_name || match.team_a || "BYE";
+        const teamB = match.team2?.team_name || match.team_b || "BYE";
 
-        let status = match.status;
-        let winnerId = null;
-
-        // Automatic BYE win
-        if (match.team1?.bye && !match.team2?.bye) {
-            status = MATCH_STATUS.COMPLETED;
-            winnerId = match.team2Id;
-        }
-
-        if (!match.team1?.bye && match.team2?.bye) {
-            status = MATCH_STATUS.COMPLETED;
-            winnerId = match.team1Id;
-        }
+        const roundStr = String(match.round || "1");
+        const roundName = roundStr.startsWith("WB-R") ? roundStr : `WB-R${roundStr}`;
 
         await db.run(
             `
             INSERT INTO matches
             (
-                match_id,
-                bracket,
+                team_a,
+                team_b,
+                winner,
                 round,
-                match_number,
-                team1_id,
-                team2_id,
-                winner_id,
-                status,
-                best_of
+                status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             `,
             [
-                match.matchId,
-                match.bracket,
-                match.round,
-                match.matchNumber,
-                match.team1Id,
-                match.team2Id,
-                winnerId,
-                status,
-                1
+                teamA,
+                teamB,
+                match.winner || null,
+                roundName,
+                match.status || MATCH_STATUS.PENDING
             ]
         );
     }
