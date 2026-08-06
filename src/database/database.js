@@ -135,29 +135,78 @@ async function connectDatabase() {
         // Matches
         // =====================================
 
-        await db.exec(`
-            CREATE TABLE IF NOT EXISTS matches (
+// =====================================
+// Tournament Matches
+// =====================================
 
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+await db.exec(`
+CREATE TABLE IF NOT EXISTS matches (
 
-                team_a TEXT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-                team_b TEXT,
+    match_id TEXT UNIQUE,
 
-                winner TEXT,
+    bracket TEXT,
 
-                round TEXT,
+    round INTEGER,
 
-                status TEXT DEFAULT 'Pending',
+    match_number INTEGER,
 
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
+    team1_id INTEGER,
 
-        await db.exec(`
-            CREATE INDEX IF NOT EXISTS idx_match_round
-            ON matches(round);
-        `);
+    team2_id INTEGER,
+
+    winner_id INTEGER,
+
+    loser_id INTEGER,
+
+    status TEXT DEFAULT 'PENDING',
+
+    best_of INTEGER DEFAULT 1,
+
+    score TEXT,
+
+    mapban_link TEXT,
+
+    discord_channel_id TEXT,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY(team1_id) REFERENCES teams(id),
+
+    FOREIGN KEY(team2_id) REFERENCES teams(id),
+
+    FOREIGN KEY(winner_id) REFERENCES teams(id),
+
+    FOREIGN KEY(loser_id) REFERENCES teams(id)
+
+);
+`);
+
+await db.exec(`
+CREATE INDEX IF NOT EXISTS idx_match_id
+ON matches(match_id);
+`);
+
+// =====================================
+// Bracket Progression
+// =====================================
+
+await db.exec(`
+CREATE TABLE IF NOT EXISTS bracket_progression (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    current_match TEXT,
+
+    winner_next_match TEXT,
+
+    loser_next_match TEXT
+
+);
+`);
+
+
 
         console.log("✅ Database Ready");
     } catch (error) {
